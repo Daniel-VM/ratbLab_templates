@@ -1,0 +1,9 @@
+
+# Create sample id list
+find ../RAW_NC -name "*.fastq.gz" | cut -d "/" -f 3 | cut -d "_" -f 1 | sort -u > samples_id.txt
+
+# Create reads sym link into ANALYSIS/00-reads shorting the sample name 
+mkdir -p 00-reads
+cd 00-reads; cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW_NC/%_*R1*.fastq.gz %_R1.fastq.gz" | bash; cd -
+cd 00-reads; cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW_NC/%_*R2*.fastq.gz %_R2.fastq.gz" | bash; cd -
+mv ASSEMBLY01 $(date '+%Y%m%d')_ASSEMBLY01

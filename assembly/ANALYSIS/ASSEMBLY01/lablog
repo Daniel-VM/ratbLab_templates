@@ -1,0 +1,57 @@
+# SOURCE: https://github.com/BU-ISCIII/buisciii-tools/blob/develop/bu_isciii/templates/assembly/ANALYSIS/ANALYSIS01_ASSEMBLY/lablog
+echo "Do you want to save trimmed reads in outdir?"
+
+read -p 'Write y or n: ' trimmed
+
+TRIMMED=$(echo "${trimmed}" | tr '[:upper:]' '[:lower:]')
+
+if [ "$TRIMMED" == "yes" ] || [ "$TRIMMED" == "y" ]
+then SAVETRIMMED="True"
+else SAVETRIMMED="False"
+fi
+
+echo "Is gram positive or negative?"
+
+read -p 'Write + or -: ' grammtype
+
+if [ "$grammtype" != "-" ] && [ "$grammtype" != "+" ]
+then
+    echo "The given param: $grammtype does not match any of the accepted params ('+' or '-')"
+    exit 1
+fi
+
+ln -s ../00-reads .
+ln -s ../samples_id.txt .
+
+echo "sample,fastq_1,fastq_2" > samplesheet.csv
+cat samples_id.txt | while read in; do echo "${in},00-reads/${in}_R1.fastq.gz,00-reads/${in}_R2.fastq.gz"; done >> samplesheet.csv
+
+#module load Nextflow/21.10.6 singularity
+scratch_dir=$(echo $PWD | sed "s/\/data\/cnm\/ratb\/services\/ratblab/\/scratch\/cnm\/antibioticos/g")
+echo $scratch_dir
+
+cat <<EOF > assembly.sbatch
+#!/bin/bash
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 2
+#SBATCH --mem 8G
+#SBATCH --time 28:00:00
+#SBATCH --partition middle_idx
+#SBATCH --output $(date '+%Y%m%d')_assembly01.log
+#SBATCH --chdir $scratch_dir
+
+module load Nextflow/22.10.1 singularity
+export NXF_OPTS="-Xms500M -Xmx4G"
+
+nextflow run /data/cnm/ratb/pipelines/ratbLab_wgs/main.nf \\
+    -profile singularity \\
+    -c ../../DOC/nextflow_xtutatis.config \\
+    --input samplesheet.csv \\
+    --illumina_clip /soft/eb_obx/software/Trimmomatic/0.39-Java-11/adapters/NexteraPE-PE.fa \\
+    --mash_screen_db /data/cnm/ratb/mperezv/databases/mash/RefSeq88n.msh \\
+    --outdir ./results \\
+    -resume
+
+EOF
+
+echo "sbatch wgs_ratblab.sbatch" > _01_nf_wgs_ratblab.sh

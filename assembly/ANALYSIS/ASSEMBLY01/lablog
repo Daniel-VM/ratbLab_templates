@@ -6,18 +6,8 @@ read -p 'Write y or n: ' trimmed
 TRIMMED=$(echo "${trimmed}" | tr '[:upper:]' '[:lower:]')
 
 if [ "$TRIMMED" == "yes" ] || [ "$TRIMMED" == "y" ]
-then SAVETRIMMED="True"
-else SAVETRIMMED="False"
-fi
-
-echo "Is gram positive or negative?"
-
-read -p 'Write + or -: ' grammtype
-
-if [ "$grammtype" != "-" ] && [ "$grammtype" != "+" ]
-then
-    echo "The given param: $grammtype does not match any of the accepted params ('+' or '-')"
-    exit 1
+then SAVETRIMMED="true"
+else SAVETRIMMED="false"
 fi
 
 ln -s ../00-reads .
@@ -27,7 +17,7 @@ echo "sample,fastq_1,fastq_2" > samplesheet.csv
 cat samples_id.txt | while read in; do echo "${in},00-reads/${in}_R1.fastq.gz,00-reads/${in}_R2.fastq.gz"; done >> samplesheet.csv
 
 #module load Nextflow/21.10.6 singularity
-scratch_dir=$(echo $PWD | sed "s/\/data\/cnm\/ratb\/services\/ratblab/\/scratch\/cnm\/antibioticos/g")
+scratch_dir=$(echo $PWD | sed "s/\/data\/cnm\/ratb\/mperezv\/ANALYSIS/\/scratch\/cnm\/antibioticos/g")
 echo $scratch_dir
 
 cat <<EOF > assembly.sbatch
@@ -35,8 +25,8 @@ cat <<EOF > assembly.sbatch
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task 2
 #SBATCH --mem 8G
-#SBATCH --time 28:00:00
-#SBATCH --partition middle_idx
+#SBATCH --time 48:00:00
+#SBATCH --partition middle_obx
 #SBATCH --output $(date '+%Y%m%d')_assembly01.log
 #SBATCH --chdir $scratch_dir
 
@@ -47,7 +37,9 @@ nextflow run /data/cnm/ratb/pipelines/ratbLab_wgs/main.nf \\
     -profile singularity \\
     -c ../../DOC/nextflow_xtutatis.config \\
     --input samplesheet.csv \\
+    --trimmomatic_args 'SLIDINGWINDOW:4:20 MINLEN:50' \\
     --illumina_clip /soft/eb_obx/software/Trimmomatic/0.39-Java-11/adapters/NexteraPE-PE.fa \\
+    --save_trimmed $SAVETRIMMED \\
     --mash_screen_db /data/cnm/ratb/mperezv/databases/mash/RefSeq88n.msh \\
     --outdir ./results \\
     -resume

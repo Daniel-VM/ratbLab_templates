@@ -26,7 +26,7 @@ cat <<EOF > assembly.sbatch
 #SBATCH --cpus-per-task 2
 #SBATCH --mem 8G
 #SBATCH --time 48:00:00
-#SBATCH --partition middle_obx
+#SBATCH --partition middle_idx
 #SBATCH --output $(date '+%Y%m%d')_assembly01.log
 #SBATCH --chdir $scratch_dir
 
